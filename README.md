@@ -9,6 +9,16 @@ against them, not just the model.
 [![CI](https://github.com/sjarmak/codeprobe/actions/workflows/ci.yml/badge.svg)](https://github.com/sjarmak/codeprobe/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
+> **Downstream field copy.** This repository is a maintained copy used for
+> prospect and customer evaluations, and it does not publish anything. Upstream
+> development and every release happen in
+> [sjarmak/codeprobe](https://github.com/sjarmak/codeprobe): the `codeprobe`
+> package on PyPI and the signed container images are built and signed there,
+> and the release, image-publishing, and Pages workflows are disabled in this
+> repository's Actions settings so a tag push here cannot publish. Install the
+> CLI from PyPI as documented below, and start with
+> [docs/POC_QUICKSTART.md](docs/POC_QUICKSTART.md).
+
 ```
 $ codeprobe interpret ./compare
 
