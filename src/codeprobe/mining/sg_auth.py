@@ -68,6 +68,17 @@ def _resolve_env_token() -> tuple[str, str] | None:
     return None
 
 
+def exported_token_var() -> str | None:
+    """Name of the first accepted token variable exported in the environment.
+
+    Returns the NAME only, never the value: callers build config that
+    *references* the variable, so handing them the secret would defeat the
+    point. ``None`` when no accepted variable is set.
+    """
+    resolved = _resolve_env_token()
+    return resolved[0] if resolved is not None else None
+
+
 class AuthError(RuntimeError):
     """Raised when no valid Sourcegraph token can be obtained.
 

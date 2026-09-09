@@ -6,11 +6,9 @@ import re
 from collections.abc import Mapping
 from typing import Any, cast
 
+from codeprobe.config.redact import ENV_REFERENCE_RE
+
 _REDACTED_MARKER = "[REDACTED]"
-_ENV_REFERENCE_RE = re.compile(
-    r"\$(?:\{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}|"
-    r"(?P<bare>[A-Za-z_][A-Za-z0-9_]*))"
-)
 
 
 class MCPConfigCredentialError(ValueError):
@@ -37,10 +35,10 @@ def _resolve_value(
                 return match.group(0)
             return environ[variable]
 
-        resolved = _ENV_REFERENCE_RE.sub(_replace, value)
+        resolved = ENV_REFERENCE_RE.sub(_replace, value)
         if _REDACTED_MARKER in resolved:
             redacted_paths.add(_display_path(path))
-        for match in _ENV_REFERENCE_RE.finditer(resolved):
+        for match in ENV_REFERENCE_RE.finditer(resolved):
             unresolved_variables.add(match.group("braced") or match.group("bare"))
         return resolved
     if isinstance(value, list):

@@ -84,7 +84,8 @@ INITIAL_WHITELIST: frozenset[tuple[str, int]] = frozenset(
         # codeprobe-f7rl.12: init_cmd.py shifted (non-TTY default
         # experiment creation replaces the no-op). Real line number below,
         # confirmed by running the lint test against the merged file.
-        ("src/codeprobe/cli/init_cmd.py", 56),
+        # Shifted again when the wizard gained MCP credential externalization.
+        ("src/codeprobe/cli/init_cmd.py", 69),
         ("src/codeprobe/cli/ratings_cmd.py", 74),
         ("src/codeprobe/cli/ratings_cmd.py", 118),
         ("src/codeprobe/cli/scaffold_cmd.py", 74),

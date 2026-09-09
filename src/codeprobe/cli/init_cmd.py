@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import os
+import re
+from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 
 import click
@@ -19,6 +23,10 @@ from codeprobe.cli.wizard import (
     ask_prompt_comparison,
     validate_experiment_name,
 )
+from codeprobe.config.redact import (
+    CredentialRequirement,
+    externalize_mcp_credentials,
+)
 from codeprobe.core.experiment import (
     create_experiment_dir,
     ensure_default_experiment,
@@ -28,6 +36,11 @@ from codeprobe.core.mcp_discovery import discover_mcp_configs
 from codeprobe.core.registry import available
 from codeprobe.models.evalrc import EvalrcConfig
 from codeprobe.models.experiment import Experiment, ExperimentConfig
+
+# A ``${VAR}`` reference only resolves for a valid shell identifier, so the
+# wizard rejects anything else rather than writing config that cannot run.
+_ENV_VAR_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_SOURCEGRAPH_ENV_VAR = "SOURCEGRAPH_TOKEN"
 
 _GOAL_DEFAULTS = {
     1: "mcp-comparison",
@@ -149,6 +162,12 @@ def run_init(
     else:
         evalrc, configs = _goal_factorial(agents, experiment_name)
 
+    # Every goal can attach an MCP config, and any literal credential inside
+    # one is destroyed by save_experiment — leaving an arm run refuses to
+    # dispatch. Rewrite them into ${VAR} references here so the experiment the
+    # wizard writes is the experiment that runs.
+    configs, credentials = _externalize_config_credentials(configs)
+
     # Create experiment directory
     experiment = Experiment(
         name=experiment_name,
@@ -168,6 +187,7 @@ def run_init(
     click.echo()
     click.echo(f"Created {exp_dir.relative_to(target)}/")
     click.echo(f"  Configurations: {', '.join(c.label for c in configs)}")
+    _report_credential_requirements(credentials)
     click.echo()
     click.echo("Next steps:")
     click.echo(f"  codeprobe mine {path}      # Mine tasks from your repo")
@@ -181,6 +201,43 @@ def run_init(
         f"Mined tasks are written to {path}/.codeprobe/tasks/ (shared); "
         f"run and interpret discover this experiment and use them automatically."
     )
+
+
+def _externalize_config_credentials(
+    configs: list[ExperimentConfig],
+) -> tuple[list[ExperimentConfig], tuple[CredentialRequirement, ...]]:
+    """Replace literal MCP secrets with ``${VAR}`` references in every config.
+
+    Returns the rewritten configs and every environment variable they now
+    reference, the caller's own references included.
+    """
+    rewritten: list[ExperimentConfig] = []
+    requirements: list[CredentialRequirement] = []
+    for config in configs:
+        mcp_config, needed = externalize_mcp_credentials(config.mcp_config)
+        requirements.extend(needed)
+        rewritten.append(replace(config, mcp_config=mcp_config))
+    return rewritten, tuple(requirements)
+
+
+def _report_credential_requirements(
+    requirements: Sequence[CredentialRequirement],
+) -> None:
+    """Name the variables that must be exported before ``run`` will dispatch.
+
+    Only the unset ones: a variable already exported needs no instruction,
+    and listing it invites the user to re-export a token they cannot see.
+    """
+    missing = sorted(
+        {r.env_var for r in requirements if not os.environ.get(r.env_var)}
+    )
+    if not missing:
+        return
+    click.echo()
+    click.echo("Your MCP arm reads these credentials from the environment")
+    click.echo("(codeprobe never stores them in experiment.json). Before running:")
+    for env_var in missing:
+        click.echo(f"  export {env_var}=<value>")
 
 
 def _prompt_agent(agents: list[str]) -> str:
@@ -253,37 +310,36 @@ def _detect_sourcegraph_in_mcp(
     return False
 
 
-def _prompt_sourcegraph_token() -> str:
-    """Resolve Sourcegraph token: cached auth > env var > interactive prompt."""
-    from codeprobe.mining.sg_auth import AuthError, get_valid_token
+def _prompt_sourcegraph_token_var() -> str:
+    """Resolve which environment variable the MCP arm reads its token from.
 
-    # 1. Check cached auth and env var via the standard auth resolver
-    try:
-        cached = get_valid_token()
-        masked = cached.access_token[:4] + "..." + cached.access_token[-4:]
-        source = "cached" if not cached.refresh_token else "cached (refreshable)"
-        click.echo(f"  Found Sourcegraph credentials ({masked}, {source})")
-        if click.confirm("  Use these credentials?", default=True):
-            return cached.access_token
-    except AuthError:
-        pass
+    The token value is deliberately never collected. ``save_experiment``
+    redacts literal credentials, so one embedded here would be gone by the
+    time ``run`` looked for it; the config references a variable instead and
+    the runtime resolves it from the environment.
+    """
+    from codeprobe.mining.sg_auth import exported_token_var, load_cached_token
 
-    # 2. Offer OAuth-style flow via `codeprobe auth sourcegraph`
+    exported = exported_token_var()
+    if exported is not None:
+        click.echo(f"  Using ${exported} from your environment.")
+        return exported
+
     click.echo()
-    click.echo("  No cached Sourcegraph credentials found.")
-    click.echo("  Options:")
-    click.echo("    1. Paste a Personal Access Token now")
-    click.echo("    2. Run `codeprobe auth sourcegraph` first (recommended)")
-    choice = click.prompt("  Choose", type=click.IntRange(1, 2), default=1)
+    click.echo("  The MCP arm reads its Sourcegraph token from the environment at")
+    click.echo("  run time; codeprobe never stores credentials in the experiment.")
+    if load_cached_token() is not None:
+        click.echo("  Your `codeprobe auth` cache serves mining, not the MCP arm.")
 
-    if choice == 2:
-        click.echo()
-        click.echo("  Run this command, then re-run `codeprobe init`:")
-        click.echo("    codeprobe auth sourcegraph")
-        raise SystemExit(0)
-
-    token: str = click.prompt("  Sourcegraph access token", hide_input=True)
-    return token
+    while True:
+        raw: str = click.prompt(
+            "  Environment variable holding the token",
+            default=_SOURCEGRAPH_ENV_VAR,
+        )
+        name = raw.strip().lstrip("$").strip("{}").strip()
+        if _ENV_VAR_NAME_RE.match(name):
+            return name
+        click.echo(f"  Error: '{name}' is not a valid environment variable name.")
 
 
 def _prompt_sourcegraph_url() -> str | None:
@@ -372,13 +428,13 @@ def _goal_mcp(agents: list[str], name: str) -> _Result:
                 )
 
     # No discovered configs or user chose manual entry
-    token = _prompt_sourcegraph_token()
+    token_var = _prompt_sourcegraph_token_var()
     sg_url = _prompt_sourcegraph_url()
     return ask_mcp_comparison(
         experiment_name=name,
         agent=agent,
         model=model,
-        sourcegraph_token=token,
+        sourcegraph_token="${" + token_var + "}",
         sourcegraph_url=sg_url,
     )
 

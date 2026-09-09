@@ -557,3 +557,240 @@ class TestCrossSurfaceParity:
         out = policy.apply(f"leaked: {token}")
         assert out is not None
         assert token not in out
+
+
+# ---------------------------------------------------------------------------
+# Externalization — the inverse of redaction
+# ---------------------------------------------------------------------------
+
+
+def _sg_config(authorization: str) -> dict:
+    return {
+        "mcpServers": {
+            "sourcegraph": {
+                "type": "http",
+                "url": "https://sourcegraph.example/.api/mcp/all",
+                "headers": {"Authorization": authorization},
+            }
+        }
+    }
+
+
+class TestExternalizeMcpCredentials:
+    """Literal credentials must become env references before persistence.
+
+    ``save_experiment`` runs every config through ``redact_mcp_headers``,
+    which destroys literal secrets. A config carrying one is therefore dead
+    on arrival at ``run`` (UNUSABLE_MCP_CREDENTIAL). Externalization has to
+    cover exactly what redaction destroys.
+    """
+
+    def test_rewrites_literal_authorization_header(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        source = _sg_config("token sgp_live1234567890abcdef")
+        original = json.loads(json.dumps(source))
+
+        result, requirements = externalize_mcp_credentials(source)
+
+        assert source == original
+        assert result is not None
+        header = result["mcpServers"]["sourcegraph"]["headers"]["Authorization"]
+        assert header == "token ${SOURCEGRAPH_TOKEN}"
+        assert [r.env_var for r in requirements] == ["SOURCEGRAPH_TOKEN"]
+        assert requirements[0].rewritten is True
+        assert requirements[0].path == "mcpServers.sourcegraph.headers.Authorization"
+
+    def test_rewritten_config_survives_persistence_redaction(self) -> None:
+        from codeprobe.config.redact import (
+            externalize_mcp_credentials,
+            redact_mcp_headers,
+        )
+
+        result, _ = externalize_mcp_credentials(
+            _sg_config("token sgp_live1234567890abcdef")
+        )
+
+        assert redact_mcp_headers(result) == result
+
+    def test_rewritten_config_resolves_when_variable_is_exported(self) -> None:
+        from codeprobe.config.mcp_runtime import resolve_mcp_runtime_config
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        result, requirements = externalize_mcp_credentials(
+            _sg_config("token sgp_live1234567890abcdef")
+        )
+
+        resolved = resolve_mcp_runtime_config(
+            result,
+            environ={r.env_var: "sgp_live1234567890abcdef" for r in requirements},
+        )
+
+        assert resolved is not None
+        assert (
+            resolved["mcpServers"]["sourcegraph"]["headers"]["Authorization"]
+            == "token sgp_live1234567890abcdef"
+        )
+
+    def test_scheme_less_header_value_is_fully_replaced(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        result, _ = externalize_mcp_credentials(_sg_config("abc123opaque"))
+
+        assert result is not None
+        assert (
+            result["mcpServers"]["sourcegraph"]["headers"]["Authorization"]
+            == "${SOURCEGRAPH_TOKEN}"
+        )
+
+    def test_self_hosted_token_without_known_prefix_is_rewritten(self) -> None:
+        """redact_mcp_headers destroys ANY literal Authorization value."""
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        result, requirements = externalize_mcp_credentials(_sg_config("token abc123"))
+
+        assert result is not None
+        assert (
+            result["mcpServers"]["sourcegraph"]["headers"]["Authorization"]
+            == "token ${SOURCEGRAPH_TOKEN}"
+        )
+        assert requirements
+
+    def test_existing_reference_is_preserved_and_reported(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        result, requirements = externalize_mcp_credentials(
+            _sg_config("token ${MY_OWN_TOKEN}")
+        )
+
+        assert result is not None
+        assert (
+            result["mcpServers"]["sourcegraph"]["headers"]["Authorization"]
+            == "token ${MY_OWN_TOKEN}"
+        )
+        assert [(r.env_var, r.rewritten) for r in requirements] == [
+            ("MY_OWN_TOKEN", False)
+        ]
+
+    def test_unknown_server_gets_namespaced_variable(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        source = {
+            "mcpServers": {
+                "acme-search": {
+                    "type": "http",
+                    "url": "https://acme.example/mcp",
+                    "headers": {"Authorization": "Bearer sk-acme1234567890abcdef"},
+                }
+            }
+        }
+
+        result, requirements = externalize_mcp_credentials(source)
+
+        assert result is not None
+        assert (
+            result["mcpServers"]["acme-search"]["headers"]["Authorization"]
+            == "Bearer ${CODEPROBE_MCP_ACME_SEARCH_TOKEN}"
+        )
+        assert [r.env_var for r in requirements] == ["CODEPROBE_MCP_ACME_SEARCH_TOKEN"]
+
+    def test_rewrites_header_argument(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        source = {
+            "mcpServers": {
+                "sourcegraph": {
+                    "command": "mcp-proxy",
+                    "args": [
+                        "--header",
+                        "Authorization: token sgp_live1234567890abcdef",
+                    ],
+                }
+            }
+        }
+
+        result, requirements = externalize_mcp_credentials(source)
+
+        assert result is not None
+        assert result["mcpServers"]["sourcegraph"]["args"] == [
+            "--header",
+            "Authorization: token ${SOURCEGRAPH_TOKEN}",
+        ]
+        assert [r.env_var for r in requirements] == ["SOURCEGRAPH_TOKEN"]
+
+    def test_rewrites_token_shaped_argument(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        source = {
+            "mcpServers": {
+                "sourcegraph": {
+                    "command": "mcp-proxy",
+                    "args": ["--token", "sgp_live1234567890abcdef"],
+                }
+            }
+        }
+
+        result, _ = externalize_mcp_credentials(source)
+
+        assert result is not None
+        assert result["mcpServers"]["sourcegraph"]["args"] == [
+            "--token",
+            "${SOURCEGRAPH_TOKEN}",
+        ]
+
+    def test_env_secret_references_its_own_key(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        source = {
+            "mcpServers": {
+                "sourcegraph": {
+                    "command": "mcp-server",
+                    "env": {
+                        "SRC_ACCESS_TOKEN": "sgp_live1234567890abcdef",
+                        "SRC_ENDPOINT": "https://sourcegraph.example",
+                    },
+                }
+            }
+        }
+
+        result, requirements = externalize_mcp_credentials(source)
+
+        assert result is not None
+        env = result["mcpServers"]["sourcegraph"]["env"]
+        assert env["SRC_ACCESS_TOKEN"] == "${SRC_ACCESS_TOKEN}"
+        assert env["SRC_ENDPOINT"] == "https://sourcegraph.example"
+        assert [r.env_var for r in requirements] == ["SRC_ACCESS_TOKEN"]
+
+    def test_secret_never_appears_in_output(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        secret = "sgp_do-not-print-me-1234567890"
+
+        result, requirements = externalize_mcp_credentials(_sg_config(f"token {secret}"))
+
+        assert secret not in repr(result)
+        assert all(secret not in repr(r) for r in requirements)
+
+    def test_is_idempotent(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        once, _ = externalize_mcp_credentials(_sg_config("token sgp_live1234567890abc"))
+        twice, requirements = externalize_mcp_credentials(once)
+
+        assert twice == once
+        assert all(not r.rewritten for r in requirements)
+
+    def test_none_passes_through(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        assert externalize_mcp_credentials(None) == (None, ())
+
+    def test_non_standard_structure_passes_through(self) -> None:
+        from codeprobe.config.redact import externalize_mcp_credentials
+
+        source = {"servers": {"sourcegraph": {"headers": {"Authorization": "x"}}}}
+
+        result, requirements = externalize_mcp_credentials(source)
+
+        assert result == source
+        assert requirements == ()
