@@ -22,7 +22,7 @@ classifiers = [
 ]
 dependencies = [
     "click>=8.0,<9",
-    "pyyaml>=6.0,<7",
+    "pyyaml>=6.0.3,<7",
     "anthropic>=0.39,<1",
     "openai>=1.66,<3",
     "tiktoken>=0.7,<1",
