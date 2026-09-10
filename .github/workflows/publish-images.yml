@@ -132,7 +132,7 @@ jobs:
       # sigstore/cosign-installer v4.1.2
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
         with:
-          cosign-release: v3.1.2
+          cosign-release: v3.1.3
 
       - name: Resolve registry credentials
         id: registry-auth
@@ -376,7 +376,7 @@ jobs:
       # sigstore/cosign-installer v4.1.2
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
         with:
-          cosign-release: v3.1.2
+          cosign-release: v3.1.3
 
       - name: Keyless sign digest
         env:
@@ -592,7 +592,7 @@ jobs:
       # sigstore/cosign-installer v4.1.2
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
         with:
-          cosign-release: v3.1.2
+          cosign-release: v3.1.3
 
       # oras-project/setup-oras v2.0.1
       - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d
