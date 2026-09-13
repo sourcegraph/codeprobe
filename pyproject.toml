@@ -21,7 +21,7 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 dependencies = [
-    "click>=8.0,<9",
+    "click>=8.5.0,<9",
     "pyyaml>=6.0,<7",
     "anthropic>=0.39,<1",
     "openai>=1.66,<3",
