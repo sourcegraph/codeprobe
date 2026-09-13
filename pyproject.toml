@@ -54,7 +54,7 @@ dev = [
     # Needed by tests/test_release_gate.py::test_build_and_stage_real_wheel
     # which shells out to ``python -m build --wheel`` to verify the wheel
     # produced at release time is installable and version-consistent.
-    "build>=1.0,<2",
+    "build>=1.6.1,<2",
 ]
 
 [project.scripts]
