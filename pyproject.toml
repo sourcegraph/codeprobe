@@ -45,7 +45,7 @@ dev = [
     # releases, so an open range turns CI red with no code change (codeprobe-pb4z
     # — 35 errors accumulated this way). Bump deliberately and fix the new rules
     # in the same commit.
-    "ruff>=0.15,<0.16",
+    "ruff>=0.16.8,<0.17",
     "mypy>=1.10,<2",
     "types-PyYAML>=6.0,<7",
     "types-requests>=2.31,<3",
