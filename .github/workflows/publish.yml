@@ -45,7 +45,7 @@ jobs:
       # actions/setup-python v7.0.0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: "3.12"
+          python-version: "3.14.7"
       - run: pip install -e ".[dev]"
       - run: python scripts/e2e/self_serve_acceptance.py
 
@@ -79,7 +79,7 @@ jobs:
       # actions/setup-python v7.0.0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: "3.12"
+          python-version: "3.14.7"
       - run: pip install build
       - run: python -m build --wheel
       - name: Clean-wheel real-agent enterprise journey
@@ -137,7 +137,7 @@ jobs:
       # actions/setup-python v7.0.0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: "3.12"
+          python-version: "3.14.7"
       # The published wheel is the exact one the real-agent journey installed
       # and exercised, whenever that journey ran.
       # actions/download-artifact v8.0.1
@@ -222,7 +222,7 @@ jobs:
       # actions/setup-python v7.0.0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: "3.12"
+          python-version: "3.14.7"
       - run: pip install twine
       - run: twine upload dist/*
         env:

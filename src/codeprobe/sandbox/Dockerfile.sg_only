@@ -3,7 +3,7 @@
 # Provides python + git + ripgrep + coreutils so agents can run read/search/
 # script workloads inside a container whose only writable surfaces are
 # those explicitly bind-mounted :rw by the caller.
-FROM python:3.12-slim
+FROM python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
