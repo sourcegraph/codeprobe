@@ -32,7 +32,7 @@ jobs:
           node architecture/site/build-page.mjs --model model.json --figures _site/figures --out _site/index.html --repo codeprobe --explore ./explore/
           cp architecture/site/styles.css architecture/site/favicon.svg _site/
           cp -r architecture/site/fonts _site/fonts
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
   deploy:
