@@ -25,7 +25,7 @@ on:
 jobs:
   build:
     name: "build (py${{ matrix.python-version }})"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: true
       matrix:
@@ -138,7 +138,7 @@ jobs:
   e2e-self-serve:
     name: e2e-self-serve
     needs: [build]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@v5

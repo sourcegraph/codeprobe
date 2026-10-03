@@ -11,7 +11,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     strategy:
@@ -34,7 +34,7 @@ jobs:
   # Zero-cost wiring coverage remains a normal release prerequisite, but its
   # e2e-stub producer can never create the retained release evidence below.
   e2e-self-serve:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
@@ -61,7 +61,7 @@ jobs:
     if: >-
       vars.CODEPROBE_RELEASE_AGENT_IMAGE != ''
       && vars.CODEPROBE_RELEASE_SCORING_IMAGE != ''
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     environment: release-real-agent
     permissions:
@@ -123,7 +123,7 @@ jobs:
       && needs.e2e-self-serve.result == 'success'
       && needs.e2e-enterprise.result != 'failure'
       && needs.e2e-enterprise.result != 'cancelled'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     env:
@@ -210,7 +210,7 @@ jobs:
     # 31136068209 passed every gate and shipped nothing. Assert gate's real
     # result instead, so a skipped or failed gate still cannot publish.
     if: always() && needs.gate.result == 'success'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
