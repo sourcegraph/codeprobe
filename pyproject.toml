@@ -46,7 +46,7 @@ dev = [
     # — 35 errors accumulated this way). Bump deliberately and fix the new rules
     # in the same commit.
     "ruff>=0.15,<0.16",
-    "mypy>=1.10,<2",
+    "mypy>=1.20.2,<2",
     "types-PyYAML>=6.0,<7",
     "types-requests>=2.31,<3",
     "scipy-stubs>=1.11,<2",
