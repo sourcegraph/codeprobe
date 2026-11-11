@@ -15,15 +15,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
       - name: Check model source links resolve (drift guard)
         run: node architecture/site/check-links.mjs
-      - uses: likec4/actions@v1
+      - uses: likec4/actions@d36a6b8c87c1d540a3737302808755db435183b0 # v1.89.0
         with: { export: png, path: architecture, output: _site/figures }
-      - uses: likec4/actions@v1
+      - uses: likec4/actions@d36a6b8c87c1d540a3737302808755db435183b0 # v1.89.0
         with: { action: build, path: architecture, output: _site/explore, base: /codeprobe/explore/, use-hash-history: 'true' }
       - name: Assemble website-matched landing page
         run: |
@@ -32,7 +32,7 @@ jobs:
           node architecture/site/build-page.mjs --model model.json --figures _site/figures --out _site/index.html --repo codeprobe --explore ./explore/
           cp architecture/site/styles.css architecture/site/favicon.svg _site/
           cp -r architecture/site/fonts _site/fonts
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
   deploy:
@@ -43,4 +43,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
