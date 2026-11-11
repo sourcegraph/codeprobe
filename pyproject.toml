@@ -39,7 +39,7 @@ Issues = "https://github.com/sjarmak/codeprobe/issues"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0,<9",
+    "pytest>=8.4.2,<9",
     "pytest-cov>=5.0,<6",
     # Pinned to a minor range, not >=0.4,<1: ruff adds lint rules in minor
     # releases, so an open range turns CI red with no code change (codeprobe-pb4z
