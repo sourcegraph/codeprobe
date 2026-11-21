@@ -26,7 +26,7 @@ dependencies = [
     "anthropic>=0.39,<1",
     "openai>=1.66,<3",
     "tiktoken>=0.7,<1",
-    "scipy>=1.11,<2",
+    "scipy>=1.18.1,<2",
     "rich>=13.7,<14",
     "jinja2>=3.1,<4",
     "docker-image-py>=0.2,<0.3",
@@ -50,7 +50,7 @@ dev = [
     "types-PyYAML>=6.0,<7",
     "types-requests>=2.31,<3",
     "scipy-stubs>=1.11,<2",
-    "scipy>=1.11,<2",
+    "scipy>=1.18.1,<2",
     # Needed by tests/test_release_gate.py::test_build_and_stage_real_wheel
     # which shells out to ``python -m build --wheel`` to verify the wheel
     # produced at release time is installable and version-consistent.
