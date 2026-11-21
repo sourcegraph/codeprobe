@@ -27,7 +27,7 @@ env:
 
 jobs:
   authorize-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     environment: release-images
     permissions:
       contents: read
@@ -90,7 +90,7 @@ jobs:
           PY
 
   reuse-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     needs: [authorize-release]
     environment: release-images
     permissions:
@@ -182,7 +182,7 @@ jobs:
           if-no-files-found: error
 
   build-candidate-images:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     needs: [authorize-release, reuse-release]
     if: needs.reuse-release.outputs.reuse != 'true'
     environment: release-images
@@ -467,7 +467,7 @@ jobs:
           if-no-files-found: error
 
   cleanup-unpromoted-candidates:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     needs: [authorize-release, reuse-release, build-candidate-images]
     if: >-
       always() &&
@@ -554,7 +554,7 @@ jobs:
           if-no-files-found: error
 
   promote-images:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     needs: [build-candidate-images, authorize-release, reuse-release]
     if: needs.reuse-release.outputs.reuse != 'true'
     environment: release-images
